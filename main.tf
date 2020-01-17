@@ -11,7 +11,7 @@ locals {
   vpc_id = element(
     concat(
       aws_vpc_ipv4_cidr_block_association.this.*.vpc_id,
-      aws_vpc.this.*.id,
+      var.vpc_id != null ? [var.vpc_id] : aws_vpc.this.*.id,
       [""],
     ),
     0,
@@ -27,7 +27,7 @@ locals {
 # VPC
 ######
 resource "aws_vpc" "this" {
-  count = var.create_vpc ? 1 : 0
+  count = var.create_vpc && var.vpc_id == null ? 1 : 0
 
   cidr_block                       = var.cidr
   instance_tenancy                 = var.instance_tenancy
@@ -49,7 +49,7 @@ resource "aws_vpc" "this" {
 resource "aws_vpc_ipv4_cidr_block_association" "this" {
   count = var.create_vpc && length(var.secondary_cidr_blocks) > 0 ? length(var.secondary_cidr_blocks) : 0
 
-  vpc_id = aws_vpc.this[0].id
+  vpc_id = var.vpc_id != null ? var.vpc_id : aws_vpc.this[0].id
 
   cidr_block = element(var.secondary_cidr_blocks, count.index)
 }
@@ -480,7 +480,7 @@ resource "aws_subnet" "intra" {
 resource "aws_default_network_acl" "this" {
   count = var.create_vpc && var.manage_default_network_acl ? 1 : 0
 
-  default_network_acl_id = element(concat(aws_vpc.this.*.default_network_acl_id, [""]), 0)
+  default_network_acl_id = var.default_network_acl_id != null ? var.default_network_acl_id : element(concat(aws_vpc.this.*.default_network_acl_id, [""]), 0)
 
   dynamic "ingress" {
     for_each = var.default_network_acl_ingress
@@ -530,7 +530,7 @@ resource "aws_default_network_acl" "this" {
 resource "aws_network_acl" "public" {
   count = var.create_vpc && var.public_dedicated_network_acl && length(var.public_subnets) > 0 ? 1 : 0
 
-  vpc_id     = element(concat(aws_vpc.this.*.id, [""]), 0)
+  vpc_id     = var.vpc_id != null ? var.vpc_id : element(concat(aws_vpc.this.*.id, [""]), 0)
   subnet_ids = aws_subnet.public.*.id
 
   tags = merge(
@@ -582,7 +582,7 @@ resource "aws_network_acl_rule" "public_outbound" {
 resource "aws_network_acl" "private" {
   count = var.create_vpc && var.private_dedicated_network_acl && length(var.private_subnets) > 0 ? 1 : 0
 
-  vpc_id     = element(concat(aws_vpc.this.*.id, [""]), 0)
+  vpc_id     = var.vpc_id != null ? var.vpc_id : element(concat(aws_vpc.this.*.id, [""]), 0)
   subnet_ids = aws_subnet.private.*.id
 
   tags = merge(
@@ -634,7 +634,7 @@ resource "aws_network_acl_rule" "private_outbound" {
 resource "aws_network_acl" "intra" {
   count = var.create_vpc && var.intra_dedicated_network_acl && length(var.intra_subnets) > 0 ? 1 : 0
 
-  vpc_id     = element(concat(aws_vpc.this.*.id, [""]), 0)
+  vpc_id     = var.vpc_id != null ? var.vpc_id : element(concat(aws_vpc.this.*.id, [""]), 0)
   subnet_ids = aws_subnet.intra.*.id
 
   tags = merge(
@@ -686,7 +686,7 @@ resource "aws_network_acl_rule" "intra_outbound" {
 resource "aws_network_acl" "database" {
   count = var.create_vpc && var.database_dedicated_network_acl && length(var.database_subnets) > 0 ? 1 : 0
 
-  vpc_id     = element(concat(aws_vpc.this.*.id, [""]), 0)
+  vpc_id     = var.vpc_id != null ? var.vpc_id : element(concat(aws_vpc.this.*.id, [""]), 0)
   subnet_ids = aws_subnet.database.*.id
 
   tags = merge(
@@ -738,7 +738,7 @@ resource "aws_network_acl_rule" "database_outbound" {
 resource "aws_network_acl" "redshift" {
   count = var.create_vpc && var.redshift_dedicated_network_acl && length(var.redshift_subnets) > 0 ? 1 : 0
 
-  vpc_id     = element(concat(aws_vpc.this.*.id, [""]), 0)
+  vpc_id     = var.vpc_id != null ? var.vpc_id : element(concat(aws_vpc.this.*.id, [""]), 0)
   subnet_ids = aws_subnet.redshift.*.id
 
   tags = merge(
@@ -790,7 +790,7 @@ resource "aws_network_acl_rule" "redshift_outbound" {
 resource "aws_network_acl" "elasticache" {
   count = var.create_vpc && var.elasticache_dedicated_network_acl && length(var.elasticache_subnets) > 0 ? 1 : 0
 
-  vpc_id     = element(concat(aws_vpc.this.*.id, [""]), 0)
+  vpc_id     = var.vpc_id != null ? var.vpc_id : element(concat(aws_vpc.this.*.id, [""]), 0)
   subnet_ids = aws_subnet.elasticache.*.id
 
   tags = merge(

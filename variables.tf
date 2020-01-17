@@ -4,6 +4,18 @@ variable "create_vpc" {
   default     = true
 }
 
+variable "vpc_id" {
+  description = "The VPC ID of an existing VPC you want to utilize"
+  type        = string
+  default     = null
+}
+
+variable "default_network_acl_id" {
+  description = "The default network acl ID of an existing VPC you want to utilize"
+  type        = string
+  default     = null
+}
+
 variable "name" {
   description = "Name to be used on all the resources as identifier"
   type        = string
