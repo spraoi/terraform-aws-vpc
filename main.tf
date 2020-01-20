@@ -26,6 +26,11 @@ locals {
 ######
 # VPC
 ######
+data "aws_vpc" "existing" {
+  count = var.vpc_id != null ? 1 : 0
+  id    = var.vpc_id
+}
+
 resource "aws_vpc" "this" {
   count = var.create_vpc && var.vpc_id == null ? 1 : 0
 
