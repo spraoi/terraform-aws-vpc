@@ -16,6 +16,12 @@ variable "default_network_acl_id" {
   default     = null
 }
 
+variable "transit_gateway_id" {
+  description = "The transit gateway to attach with route tables"
+  type        = string
+  default     = null
+}
+
 variable "name" {
   description = "Name to be used on all the resources as identifier"
   type        = string
