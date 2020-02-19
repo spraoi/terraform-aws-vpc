@@ -121,7 +121,7 @@ resource "aws_route" "transit_gateway" {
 
   route_table_id         = var.vpc_id != null ? data.aws_vpc.existing[0].main_route_table_id : aws_vpc.this[0].main_route_table_id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = var.transit_gateway_id
+  transit_gateway_id     = var.transit_gateway_id
 
   timeouts {
     create = "5m"
