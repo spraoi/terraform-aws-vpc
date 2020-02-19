@@ -94,7 +94,7 @@ resource "aws_vpc_dhcp_options_association" "this" {
 # Internet Gateway
 ###################
 resource "aws_internet_gateway" "this" {
-  count = var.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = var.create_vpc && var.transit_gateway_id == null && length(var.public_subnets) > 0 ? 1 : 0
 
   vpc_id = local.vpc_id
 
@@ -108,16 +108,31 @@ resource "aws_internet_gateway" "this" {
 }
 
 resource "aws_egress_only_internet_gateway" "this" {
-  count = var.create_vpc && var.enable_ipv6 && local.max_subnet_length > 0 ? 1 : 0
+  count = var.create_vpc && var.transit_gateway_id == null && var.enable_ipv6 && local.max_subnet_length > 0 ? 1 : 0
 
   vpc_id = local.vpc_id
+}
+
+###################
+# Transit Gateway Route
+###################
+resource "aws_route" "transit_gateway" {
+  count = var.create_vpc && var.transit_gateway_id != null ? 1 : 0
+
+  route_table_id         = var.vpc_id != null ? data.aws_vpc.existing[0].main_route_table_id : aws_vpc.this[0].main_route_table_id
+  destination_cidr_block = "0.0.0.0/0"
+  transit_gateway_id     = var.transit_gateway_id
+
+  timeouts {
+    create = "5m"
+  }
 }
 
 ################
 # Publiс routes
 ################
 resource "aws_route_table" "public" {
-  count = var.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = var.create_vpc && var.transit_gateway_id == null && length(var.public_subnets) > 0 ? 1 : 0
 
   vpc_id = local.vpc_id
 
@@ -131,7 +146,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route" "public_internet_gateway" {
-  count = var.create_vpc && length(var.public_subnets) > 0 ? 1 : 0
+  count = var.create_vpc && var.transit_gateway_id == null && length(var.public_subnets) > 0 ? 1 : 0
 
   route_table_id         = aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
@@ -143,7 +158,7 @@ resource "aws_route" "public_internet_gateway" {
 }
 
 resource "aws_route" "public_internet_gateway_ipv6" {
-  count = var.create_vpc && var.enable_ipv6 && length(var.public_subnets) > 0 ? 1 : 0
+  count = var.create_vpc && var.transit_gateway_id == null && var.enable_ipv6 && length(var.public_subnets) > 0 ? 1 : 0
 
   route_table_id              = aws_route_table.public[0].id
   destination_ipv6_cidr_block = "::/0"
@@ -155,7 +170,7 @@ resource "aws_route" "public_internet_gateway_ipv6" {
 # There are as many routing tables as the number of NAT gateways
 #################
 resource "aws_route_table" "private" {
-  count = var.create_vpc && local.max_subnet_length > 0 ? local.nat_gateway_count : 0
+  count = var.create_vpc && var.transit_gateway_id == null && local.max_subnet_length > 0 ? local.nat_gateway_count : 0
 
   vpc_id = local.vpc_id
 
@@ -928,7 +943,7 @@ resource "aws_route" "private_ipv6_egress" {
 # Route table association
 ##########################
 resource "aws_route_table_association" "private" {
-  count = var.create_vpc && length(var.private_subnets) > 0 ? length(var.private_subnets) : 0
+  count = var.create_vpc && var.transit_gateway_id == null && length(var.private_subnets) > 0 ? length(var.private_subnets) : 0
 
   subnet_id = element(aws_subnet.private.*.id, count.index)
   route_table_id = element(
@@ -988,7 +1003,7 @@ resource "aws_route_table_association" "intra" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = var.create_vpc && length(var.public_subnets) > 0 ? length(var.public_subnets) : 0
+  count = var.create_vpc && var.transit_gateway_id == null && length(var.public_subnets) > 0 ? length(var.public_subnets) : 0
 
   subnet_id      = element(aws_subnet.public.*.id, count.index)
   route_table_id = aws_route_table.public[0].id
